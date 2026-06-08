@@ -49,6 +49,19 @@ exports.handler = async (event) => {
         return await adminRoutes.verifyOtp(parsedBody, sendResponse);
       }
       
+      // User Management
+      if (path === "/api/v1/admin/users" && httpMethod === "POST") {
+        return await adminRoutes.createUser(parsedBody, sendResponse);
+      }
+      if (path === "/api/v1/admin/users" && httpMethod === "GET") {
+        return await adminRoutes.listUsers(queryStringParameters, sendResponse);
+      }
+      const userMatch = path.match(/^\/api\/v1\/admin\/users\/(.+)$/);
+      if (userMatch && httpMethod === "DELETE") {
+        const phone = decodeURIComponent(userMatch[1]);
+        return await adminRoutes.deleteUser(phone, sendResponse);
+      }
+
       // Event Management
       if (path === "/api/v1/admin/events" && httpMethod === "POST") {
         return await adminRoutes.createEvent(parsedBody, sendResponse);
@@ -56,8 +69,17 @@ exports.handler = async (event) => {
       if (path === "/api/v1/admin/events" && httpMethod === "GET") {
         return await adminRoutes.listEvents(queryStringParameters, sendResponse);
       }
-
-      // Add more admin routes here as needed...
+      const eventMatch = path.match(/^\/api\/v1\/admin\/events\/([^\/]+)$/);
+      if (eventMatch && httpMethod === "DELETE") {
+        const eventId = eventMatch[1];
+        const phone = queryStringParameters?.phone;
+        return await adminRoutes.deleteEvent(eventId, phone, sendResponse);
+      }
+      if (eventMatch && httpMethod === "PATCH") {
+        const eventId = eventMatch[1];
+        const phone = queryStringParameters?.phone;
+        return await adminRoutes.updateEvent(eventId, phone, parsedBody, sendResponse);
+      }
     }
 
     // ---- B. CUSTOMER ROUTES ----
@@ -66,6 +88,11 @@ exports.handler = async (event) => {
       // Customer Auth (Validating Firebase token & creating session)
       if (path === "/api/v1/customer/auth/verify-otp" && httpMethod === "POST") {
         return await customerRoutes.verifyCustomerOtp(parsedBody, sendResponse);
+      }
+
+      // Pre-check phone
+      if (path === "/api/v1/customer/auth/check-phone" && httpMethod === "POST") {
+        return await customerRoutes.checkPhone(parsedBody, sendResponse);
       }
       
       // Fetch Active Gallery Data

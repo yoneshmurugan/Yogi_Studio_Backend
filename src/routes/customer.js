@@ -1,6 +1,7 @@
 // src/routes/customer.js
 const { QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { docClient, TABLE_NAME } = require("../utils/db");
+const { sanitizePhone } = require("../utils/helpers");
 const jwt = require("jsonwebtoken");
 
 // In production, this should be set securely in your AWS environment variables
@@ -17,11 +18,13 @@ exports.verifyCustomerOtp = async (body, sendResponse) => {
     return sendResponse(400, { error: "Phone number is required" });
   }
 
+  const cleanPhone = sanitizePhone(phone);
+
   // Check if this phone number exists in our DynamoDB table
   const command = new QueryCommand({
     TableName: TABLE_NAME,
     KeyConditionExpression: "PK = :pk",
-    ExpressionAttributeValues: { ":pk": `PHONE#${phone}` }
+    ExpressionAttributeValues: { ":pk": `PHONE#${cleanPhone}` }
   });
 
   const response = await docClient.send(command);
@@ -36,8 +39,35 @@ exports.verifyCustomerOtp = async (body, sendResponse) => {
   return sendResponse(200, { 
     message: "Login successful", 
     token,
-    user: { phone } 
+    user: { phone: cleanPhone } 
   });
+};
+
+/**
+ * 1.5 Pre-check Phone (Customer Login)
+ * Path: POST /api/v1/customer/auth/check-phone
+ * Checks if a phone number exists in the database BEFORE sending OTP to save SMS costs.
+ */
+exports.checkPhone = async (body, sendResponse) => {
+  const { phone } = body;
+  if (!phone) return sendResponse(400, { error: "Phone number is required" });
+
+  const cleanPhone = sanitizePhone(phone);
+
+  const command = new QueryCommand({
+    TableName: TABLE_NAME,
+    KeyConditionExpression: "PK = :pk",
+    ExpressionAttributeValues: { ":pk": `PHONE#${cleanPhone}` },
+    Limit: 1
+  });
+
+  const response = await docClient.send(command);
+
+  if (!response.Items || response.Items.length === 0) {
+    return sendResponse(404, { error: "Phone number not registered" });
+  }
+
+  return sendResponse(200, { message: "Phone number valid" });
 };
 
 /**

@@ -1,5 +1,6 @@
 service: yogi-studio-api
-frameworkVersion: '3'
+frameworkVersion: '^3.0.0'
+useDotenv: true
 
 provider:
   name: aws
