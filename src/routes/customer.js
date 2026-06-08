@@ -93,24 +93,38 @@ exports.getCurrentEvent = async (headers, sendResponse) => {
   const decoded = verifyToken(headers);
   if (!decoded) return sendResponse(401, { error: "Unauthorized or expired token" });
 
-  // Fetch all events tied to this phone number
+  // Fetch everything tied to this phone number (Profile + Events) in a single query
   const command = new QueryCommand({
     TableName: TABLE_NAME,
-    KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+    KeyConditionExpression: "PK = :pk",
     ExpressionAttributeValues: { 
-      ":pk": `PHONE#${decoded.phone}`,
-      ":skPrefix": "EVENT#"
+      ":pk": `PHONE#${decoded.phone}`
     }
   });
 
   const response = await docClient.send(command);
 
   if (!response.Items || response.Items.length === 0) {
+    return sendResponse(404, { error: "No data found." });
+  }
+
+  // Extract the profile and the events
+  const profileItem = response.Items.find(item => item.SK.startsWith("PROFILE#"));
+  const events = response.Items.filter(item => item.SK.startsWith("EVENT#"));
+
+  if (events.length === 0) {
     return sendResponse(404, { error: "No active events found." });
   }
 
-  // Return all events sorted by date (newest first, assuming sorting by SK works or client sorts them)
-  return sendResponse(200, { events: response.Items });
+  // Retroactively backfill the user's name onto old events that didn't have it saved
+  const customerName = profileItem ? profileItem.name : "Your Gallery";
+  const updatedEvents = events.map(ev => ({
+    ...ev,
+    customerName: ev.customerName || customerName
+  }));
+
+  // Return all events
+  return sendResponse(200, { events: updatedEvents });
 };
 
 /**
@@ -121,7 +135,7 @@ exports.submitSelections = async (eventId, body, headers, sendResponse) => {
   const decoded = verifyToken(headers);
   if (!decoded) return sendResponse(401, { error: "Unauthorized or expired token" });
 
-  const { selectedPhotoIds } = body; // Array of IDs: ['uuid1', 'uuid2']
+  const { selectedPhotoIds, photoComments } = body; // selectedPhotoIds: ['id1', 'id2'], photoComments: { 'id1': 'comment' }
 
   if (!selectedPhotoIds || !Array.isArray(selectedPhotoIds)) {
     return sendResponse(400, { error: "Invalid selection payload" });
@@ -150,7 +164,8 @@ exports.submitSelections = async (eventId, body, headers, sendResponse) => {
     ...folder,
     photos: (folder.photos || []).map(photo => ({
       ...photo,
-      is_selected: selectedPhotoIds.includes(photo.id)
+      is_selected: selectedPhotoIds.includes(photo.id),
+      comment: photoComments && photoComments[photo.id] !== undefined ? photoComments[photo.id] : (photo.comment || "")
     }))
   }));
 
@@ -174,5 +189,51 @@ exports.submitSelections = async (eventId, body, headers, sendResponse) => {
   return sendResponse(200, { 
     message: "Selections successfully submitted!",
     status: "awaiting_approval"
+  });
+};
+
+/**
+ * 4. Revert Photo Selections (Edit Response)
+ * Path: POST /api/v1/customer/events/:eventId/revert-selections
+ */
+exports.revertSelections = async (eventId, headers, sendResponse) => {
+  const decoded = verifyToken(headers);
+  if (!decoded) return sendResponse(401, { error: "Unauthorized or expired token" });
+
+  const command = new QueryCommand({
+    TableName: TABLE_NAME,
+    KeyConditionExpression: "PK = :pk AND SK = :sk",
+    ExpressionAttributeValues: {
+      ":pk": `PHONE#${decoded.phone}`,
+      ":sk": `EVENT#${eventId}`
+    }
+  });
+
+  const eventData = await docClient.send(command);
+
+  if (!eventData.Items || eventData.Items.length === 0) {
+    return sendResponse(404, { error: "Event not found or you don't have access" });
+  }
+
+  const event = eventData.Items[0];
+
+  const updateCommand = new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: { 
+      PK: event.PK, 
+      SK: event.SK 
+    },
+    UpdateExpression: "SET #st = :status",
+    ExpressionAttributeNames: { "#st": "status" },
+    ExpressionAttributeValues: {
+      ":status": "selection_in_progress"
+    }
+  });
+
+  await docClient.send(updateCommand);
+
+  return sendResponse(200, { 
+    message: "Selections reverted, you can now edit.",
+    status: "selection_in_progress"
   });
 };

@@ -106,6 +106,13 @@ exports.handler = async (event) => {
         const eventId = submitMatch[1]; // Extracts the dynamic ID from the path
         return await customerRoutes.submitSelections(eventId, parsedBody, headers, sendResponse);
       }
+      
+      // Revert Photo Selections
+      const revertMatch = path.match(/^\/api\/v1\/customer\/events\/([^\/]+)\/revert-selections$/);
+      if (revertMatch && httpMethod === "POST") {
+        const eventId = revertMatch[1];
+        return await customerRoutes.revertSelections(eventId, headers, sendResponse);
+      }
     }
 
     // 4. Fallback 404 Error if the route doesn't match anything above
