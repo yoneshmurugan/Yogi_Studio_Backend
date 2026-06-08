@@ -2,6 +2,9 @@ service: yogi-studio-api
 frameworkVersion: '^3.0.0'
 useDotenv: true
 
+plugins:
+  - serverless-offline
+
 provider:
   name: aws
   runtime: nodejs20.x
@@ -12,7 +15,7 @@ provider:
     Project: YogiStudio
     Environment: ${self:provider.stage}
     ManagedBy: ServerlessFramework
-  # ----------------------------
+
   environment:
     DYNAMODB_TABLE: YogiStudioData-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}

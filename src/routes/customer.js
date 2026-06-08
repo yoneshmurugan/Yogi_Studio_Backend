@@ -109,10 +109,8 @@ exports.getCurrentEvent = async (headers, sendResponse) => {
     return sendResponse(404, { error: "No active events found." });
   }
 
-  // For simplicity, return the most recent event (or you could return an array of all their events)
-  const currentEvent = response.Items[response.Items.length - 1];
-
-  return sendResponse(200, { event: currentEvent });
+  // Return all events sorted by date (newest first, assuming sorting by SK works or client sorts them)
+  return sendResponse(200, { events: response.Items });
 };
 
 /**

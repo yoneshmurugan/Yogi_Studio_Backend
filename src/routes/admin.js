@@ -1,5 +1,5 @@
 // src/routes/admin.js
-const { PutCommand, QueryCommand, ScanCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+const { PutCommand, QueryCommand, ScanCommand, DeleteCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { docClient, TABLE_NAME } = require("../utils/db");
 const { sanitizePhone } = require("../utils/helpers");
 const crypto = require("crypto");
@@ -116,8 +116,7 @@ exports.listUsers = async (queryStringParameters, sendResponse) => {
  * Path: POST /api/v1/admin/events
  */
 exports.createEvent = async (body, sendResponse) => {
-  // We extract the customer phone number from the payload so we can use it as the Partition Key
-  const { customerPhone, eventName, category, date, packageType, folders } = body;
+  const { customerPhone, customerName, eventName, category, date, packageType, folders } = body;
 
   if (!customerPhone || !eventName) {
     return sendResponse(400, { error: "Customer Phone and Event Name are required" });
@@ -140,6 +139,7 @@ exports.createEvent = async (body, sendResponse) => {
     GSI1_SK: `DATE#${timestamp}`,          // SK sorts them chronologically
     id: eventId,
     customerPhone: cleanPhone,
+    customerName: customerName || "Your Gallery",
     eventName,
     category: category || "Wedding",
     eventDate: date || timestamp,
@@ -279,7 +279,7 @@ exports.updateEvent = async (eventId, phone, body, sendResponse) => {
   ExpressionAttributeNames["#u"] = "updatedAt";
   ExpressionAttributeValues[":u"] = new Date().toISOString();
 
-  const command = new require("@aws-sdk/lib-dynamodb").UpdateCommand({
+  const command = new UpdateCommand({
     TableName: TABLE_NAME,
     Key: { 
       PK: `PHONE#${cleanPhone}`, 
