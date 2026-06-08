@@ -1,0 +1,70 @@
+service: yogi-studio-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-south-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    DYNAMODB_TABLE: YogiStudioData-${self:provider.stage}
+  iam:
+    role:
+      statements:
+        # 1. DynamoDB Table Permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${aws:region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+        
+        # 2. DynamoDB GSI Permissions (For Admin Dashboard Analytics)
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+          Resource: "arn:aws:dynamodb:${aws:region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/index/GSI1"
+
+functions:
+  api:
+    handler: src/handlers/apiHandler.handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+
+resources:
+  Resources:
+    # --- DynamoDB Single Table Resource ---
+    YogiStudioTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: GSI1_PK
+            AttributeType: S
+          - AttributeName: GSI1_SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: GSI1_PK
+                KeyType: HASH
+              - AttributeName: GSI1_SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL

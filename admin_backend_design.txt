@@ -1,0 +1,198 @@
+================================================================================
+YOGI STUDIO - ADMIN PANEL BACKEND DESIGN
+================================================================================
+
+This document outlines the required Database Schema and RESTful API paths 
+for the new Yogi Studio Admin Panel flow.
+
+================================================================================
+1. DATABASE SCHEMA
+================================================================================
+Assuming a SQL (PostgreSQL/MySQL) or NoSQL (MongoDB/DynamoDB) structure. 
+Here is the logical relational mapping:
+
+--- Table: Users ---
+• id (UUID, Primary Key)
+• name (String)
+• phone (String, Unique)
+• role (String) -> 'admin' | 'client' (Default 'client')
+• status (String) -> 'active' | 'inactive'
+• created_at (Timestamp)
+• updated_at (Timestamp)
+
+--- Table: OTP_Verifications ---
+• id (UUID, Primary Key)
+• phone (String)
+• otp_code (String, Hashed/Encrypted)
+• expires_at (Timestamp)
+• verified (Boolean) -> Default: false
+• created_at (Timestamp)
+
+--- Table: Events ---
+• id (UUID, Primary Key)
+• user_id (UUID, Foreign Key -> Users.id)
+• event_name (String)
+• category (String) -> 'Wedding', 'Portrait', etc.
+• event_date (Date)
+• package_type (String) -> 'Essential', 'Premium', 'Elite'
+• notes (Text, Nullable)
+• access_token (String, Unique) -> Used for QR code gallery link
+• status (String) -> 'pending', 'active', 'awaiting_approval', 'complete', 'downloaded'
+• downloaded_at (Timestamp, Nullable)
+• created_at (Timestamp)
+• updated_at (Timestamp)
+
+--- Table: Folders ---
+• id (UUID, Primary Key)
+• event_id (UUID, Foreign Key -> Events.id)
+• name (String) -> e.g., 'Ceremony', 'Reception'
+• created_at (Timestamp)
+• updated_at (Timestamp)
+
+--- Table: Photos ---
+• id (UUID, Primary Key)
+• folder_id (UUID, Foreign Key -> Folders.id)
+• file_name (String)
+• file_url (String) -> S3 Object URL or CloudFront URL
+• file_size (Integer) -> In bytes
+• is_selected (Boolean) -> Default: false (Used when client selects photos)
+• created_at (Timestamp)
+
+--- Table: Portfolio_Albums ---
+• id (UUID, Primary Key)
+• title (String)
+• category (String) -> 'Wedding', 'Portrait', 'Commercial', 'Video'
+• cover_image_url (String)
+• is_featured (Boolean) -> Default: false (To show on homepage)
+• created_at (Timestamp)
+• updated_at (Timestamp)
+
+--- Table: Portfolio_Media ---
+• id (UUID, Primary Key)
+• album_id (UUID, Foreign Key -> Portfolio_Albums.id)
+• media_type (String) -> 'image' | 'video'
+• media_url (String)
+• thumbnail_url (String, Nullable) -> Used for videos
+• sort_order (Integer) -> For custom sorting
+• created_at (Timestamp)
+
+
+================================================================================
+2. REST API PATHS
+================================================================================
+Base URL: /api/v1/admin
+Auth: All routes require Admin JWT/Session token in headers.
+
+--- A. Auth & Users (OTP Flow) ---
+POST   /api/v1/admin/users/send-otp
+       Body: { phone, name }
+       Action: Generates a 6-digit OTP, stores in OTP_Verifications, and sends SMS.
+
+POST   /api/v1/admin/users/verify-otp
+       Body: { phone, otp_code, name }
+       Action: Verifies OTP. If valid, creates the User (if new) or logs them in.
+       Returns: { user: {...} }
+
+GET    /api/v1/admin/users
+       Query: ?search=John&limit=50&page=1
+       Action: Lists all users with their event counts.
+
+GET    /api/v1/admin/users/:userId
+       Action: Get specific user details.
+
+DELETE /api/v1/admin/users/:userId
+       Action: Deletes user and cascades delete all their events, folders, photos.
+
+--- B. Events ---
+POST   /api/v1/admin/events
+       Body: { userId, eventName, category, date, package, notes }
+       Action: Creates a new event, generates a unique `accessToken`.
+
+GET    /api/v1/admin/events
+       Query: ?userId=123 (optional)
+       Action: Lists all events. Can filter by user ID.
+
+GET    /api/v1/admin/events/:eventId
+       Action: Get specific event details (including its folders).
+
+PATCH  /api/v1/admin/events/:eventId
+       Body: { status, downloadedAt, etc. }
+       Action: Updates event details (e.g. marking as downloaded or updating status).
+
+DELETE /api/v1/admin/events/:eventId
+       Action: Deletes an event and cascades its folders and photos.
+
+--- C. Folders ---
+POST   /api/v1/admin/folders
+       Body: { eventId, name }
+       Action: Creates a new photo folder inside an event.
+
+PATCH  /api/v1/admin/folders/:folderId
+       Body: { name }
+       Action: Renames the folder.
+
+DELETE /api/v1/admin/folders/:folderId
+       Action: Deletes folder and all its photos (removes from S3 as well).
+
+--- D. Photos (Storage/S3 Integration) ---
+POST   /api/v1/admin/photos/presigned-url
+       Body: { folderId, fileName, fileType }
+       Action: Generates a temporary AWS S3 pre-signed URL for direct browser upload.
+
+POST   /api/v1/admin/photos
+       Body: { folderId, fileUrl, fileName, fileSize }
+       Action: Called after successful S3 upload to register the photo in the database.
+
+GET    /api/v1/admin/folders/:folderId/photos
+       Action: Lists all photos inside a specific folder.
+
+DELETE /api/v1/admin/photos/:photoId
+       Action: Deletes the photo record from DB and deletes the file from S3 bucket.
+
+--- E. Portfolio Management ---
+POST   /api/v1/admin/portfolio/albums
+       Body: { title, category, coverImageUrl, isFeatured }
+       Action: Creates a new public portfolio album.
+
+GET    /api/v1/admin/portfolio/albums
+       Query: ?category=Wedding
+       Action: Lists portfolio albums for the landing page.
+
+PATCH  /api/v1/admin/portfolio/albums/:albumId
+       Body: { title, isFeatured, coverImageUrl }
+       Action: Updates album details.
+
+DELETE /api/v1/admin/portfolio/albums/:albumId
+       Action: Deletes an album and cascades its media.
+
+POST   /api/v1/admin/portfolio/media/presigned-url
+       Body: { albumId, fileName, fileType }
+       Action: Generates a pre-signed URL for direct browser upload to the portfolio bucket.
+
+POST   /api/v1/admin/portfolio/media
+       Body: { albumId, mediaType, mediaUrl, thumbnailUrl, sortOrder }
+       Action: Adds a photo or video to a portfolio album.
+
+DELETE /api/v1/admin/portfolio/media/:mediaId
+       Action: Removes a media item from the portfolio and deletes from S3.
+
+--- F. Dashboard / Analytics ---
+GET    /api/v1/admin/analytics/overview
+       Action: Returns aggregated data for KPI cards:
+       Returns: { 
+         totalUsers, 
+         totalEvents, 
+         awaitingApprovalEvents, 
+         totalPhotos,
+         recentEvents: [...]
+       }
+
+================================================================================
+3. NOTES FOR IMPLEMENTATION
+================================================================================
+- Storage: Do NOT send image binaries through the Node API. Use the `presigned-url`
+  pattern so the frontend React app uploads directly to an S3 bucket.
+- Tokens: The `accessToken` on the Event model should be passed in the URL to the 
+  Customer Portal (e.g., /gallery/SJH-7842).
+- Security: Cascade deletes should ideally scrub files from the storage bucket 
+  via an async worker or S3 lifecycle rule to prevent orphaned files.

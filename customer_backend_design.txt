@@ -1,0 +1,64 @@
+================================================================================
+YOGI STUDIO - CUSTOMER PANEL BACKEND DESIGN
+================================================================================
+
+This document outlines the RESTful API paths for the Yogi Studio Customer Panel.
+
+================================================================================
+1. DATABASE SCHEMA
+================================================================================
+The Customer Panel uses the exact same database schema as the Admin Panel. 
+(Please refer to `admin_backend_design.txt` for the full schema details.)
+
+The key tables used here are:
+• Users & OTP_Verifications (for login)
+• Events (read-only view for the client)
+• Folders (read-only view for the client)
+• Photos (read-only, EXCEPT for updating the `is_selected` boolean)
+
+================================================================================
+2. REST API PATHS
+================================================================================
+Base URL: /api/v1/customer
+Auth: All routes (except initial OTP) require Client JWT/Session token in headers.
+
+--- A. Auth & Login (OTP Flow) ---
+POST   /api/v1/customer/auth/send-otp
+       Body: { phone }
+       Action: Generates OTP and sends via SMS. (Unlike admin, this only works if the
+               user exists in the DB, as admins create users first).
+
+POST   /api/v1/customer/auth/verify-otp
+       Body: { phone, otp_code }
+       Action: Verifies OTP and returns the Client JWT session token.
+
+--- B. Public Gallery Access (Optional Magic Link) ---
+GET    /api/v1/customer/gallery/verify-token
+       Query: ?token=SJH-7842
+       Action: If the customer accesses via the unique `access_token` link shared 
+               by the admin, this verifies the token and returns the basic Event Info.
+
+--- C. Data Fetching (Portal View) ---
+GET    /api/v1/customer/events/current
+       Action: Fetches the active event assigned to the logged-in client.
+       Returns: { event: {...}, folders: [ { id, name, photos: [...] } ] }
+
+--- D. Photo Selection (Submission) ---
+POST   /api/v1/customer/events/:eventId/submit-selections
+       Body: {
+         selectedPhotoIds: [uuid1, uuid2, ...],
+         rejectedPhotoIds: [uuid3, uuid4, ...]
+       }
+       Action: 
+         1. Bulk updates the `is_selected` boolean to `true` for selected IDs.
+         2. Updates the Event `status` to 'awaiting_approval'.
+         3. Triggers a notification to the admin that the client has finalised.
+
+================================================================================
+3. NOTES FOR IMPLEMENTATION
+================================================================================
+- Separation of Concerns: The Customer API must never expose admin-level fields 
+  (like other users' events or internal admin analytics).
+- Bulk Submissions: Because the frontend is designed for an "Event-wide submission",
+  the selection API should be a single bulk endpoint rather than making 100+ individual
+  API calls for each photo selected.
