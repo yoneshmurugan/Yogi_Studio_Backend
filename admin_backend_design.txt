@@ -53,7 +53,7 @@ Here is the logical relational mapping:
 • id (UUID, Primary Key)
 • folder_id (UUID, Foreign Key -> Folders.id)
 • file_name (String)
-• file_url (String) -> S3 Object URL or CloudFront URL
+• file_url (String) -> Google Cloud Storage Object URL
 • file_size (Integer) -> In bytes
 • is_selected (Boolean) -> Default: false (Used when client selects photos)
 • created_at (Timestamp)
@@ -132,16 +132,16 @@ PATCH  /api/v1/admin/folders/:folderId
        Action: Renames the folder.
 
 DELETE /api/v1/admin/folders/:folderId
-       Action: Deletes folder and all its photos (removes from S3 as well).
+       Action: Deletes folder and all its photos (removes from GCS as well).
 
---- D. Photos (Storage/S3 Integration) ---
+--- D. Photos (Storage/GCS Integration) ---
 POST   /api/v1/admin/photos/presigned-url
        Body: { folderId, fileName, fileType }
-       Action: Generates a temporary AWS S3 pre-signed URL for direct browser upload.
+       Action: Generates a temporary Google Cloud Storage pre-signed URL for direct browser upload.
 
 POST   /api/v1/admin/photos
        Body: { folderId, fileUrl, fileName, fileSize }
-       Action: Called after successful S3 upload to register the photo in the database.
+       Action: Called after successful GCS upload to register the photo in the database.
 
 GET    /api/v1/admin/folders/:folderId/photos
        Action: Lists all photos inside a specific folder.

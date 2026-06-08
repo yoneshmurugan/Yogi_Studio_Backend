@@ -89,37 +89,41 @@ exports.getCurrentEvent = async (headers, sendResponse) => {
  * 3. Submit Photo Selections
  * Path: POST /api/v1/customer/events/:eventId/submit-selections
  */
-exports.submitSelections = async (eventId, body, sendResponse) => {
+exports.submitSelections = async (eventId, body, headers, sendResponse) => {
+  const decoded = verifyToken(headers);
+  if (!decoded) return sendResponse(401, { error: "Unauthorized or expired token" });
+
   const { selectedPhotoIds } = body; // Array of IDs: ['uuid1', 'uuid2']
 
   if (!selectedPhotoIds || !Array.isArray(selectedPhotoIds)) {
     return sendResponse(400, { error: "Invalid selection payload" });
   }
 
-  // To update safely, we first fetch the event to get the phone number (PK) and existing photos
-  // Note: In a highly optimized setup, you might pass the PK in the token or URL
+  // We can directly fetch the event because we know the phone number (PK) from the JWT
   const command = new QueryCommand({
     TableName: TABLE_NAME,
-    IndexName: "GSI1", // Using the GSI to find the event by its ID if we don't know the exact phone number
-    KeyConditionExpression: "GSI1_PK = :gsiPk AND GSI1_SK = :gsiSk",
+    KeyConditionExpression: "PK = :pk AND SK = :sk",
     ExpressionAttributeValues: {
-      ":gsiPk": `EVENT#${eventId}`,
-      ":gsiSk": `EVENT#${eventId}`
+      ":pk": `PHONE#${decoded.phone}`,
+      ":sk": `EVENT#${eventId}`
     }
   });
 
   const eventData = await docClient.send(command);
 
   if (!eventData.Items || eventData.Items.length === 0) {
-    return sendResponse(404, { error: "Event not found" });
+    return sendResponse(404, { error: "Event not found or you don't have access" });
   }
 
   const event = eventData.Items[0];
 
-  // Map through the photos array and flip the `is_selected` boolean
-  const updatedPhotos = event.photos.map(photo => ({
-    ...photo,
-    is_selected: selectedPhotoIds.includes(photo.id)
+  // Map through the folders and photos to flip the `is_selected` boolean
+  const updatedFolders = (event.folders || []).map(folder => ({
+    ...folder,
+    photos: (folder.photos || []).map(photo => ({
+      ...photo,
+      is_selected: selectedPhotoIds.includes(photo.id)
+    }))
   }));
 
   // Save the updated array back to DynamoDB and change the status to 'awaiting_approval'
@@ -129,10 +133,10 @@ exports.submitSelections = async (eventId, body, sendResponse) => {
       PK: event.PK, 
       SK: event.SK 
     },
-    UpdateExpression: "SET photos = :photos, #st = :status",
+    UpdateExpression: "SET folders = :folders, #st = :status",
     ExpressionAttributeNames: { "#st": "status" },
     ExpressionAttributeValues: {
-      ":photos": updatedPhotos,
+      ":folders": updatedFolders,
       ":status": "awaiting_approval"
     }
   });

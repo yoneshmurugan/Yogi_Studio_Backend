@@ -77,7 +77,7 @@ exports.handler = async (event) => {
       const submitMatch = path.match(/^\/api\/v1\/customer\/events\/([^\/]+)\/submit-selections$/);
       if (submitMatch && httpMethod === "POST") {
         const eventId = submitMatch[1]; // Extracts the dynamic ID from the path
-        return await customerRoutes.submitSelections(eventId, parsedBody, sendResponse);
+        return await customerRoutes.submitSelections(eventId, parsedBody, headers, sendResponse);
       }
     }
 

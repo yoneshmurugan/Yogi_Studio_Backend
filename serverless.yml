@@ -6,12 +6,18 @@ provider:
   runtime: nodejs20.x
   region: ap-south-1
   stage: ${opt:stage, 'dev'}
+  # --- GLOBAL RESOURCE TAGS ---
+  tags:
+    Project: YogiStudio
+    Environment: ${self:provider.stage}
+    ManagedBy: ServerlessFramework
+  # ----------------------------
   environment:
     DYNAMODB_TABLE: YogiStudioData-${self:provider.stage}
+    JWT_SECRET: ${env:JWT_SECRET}
   iam:
     role:
       statements:
-        # 1. DynamoDB Table Permissions
         - Effect: Allow
           Action:
             - dynamodb:Query
@@ -21,8 +27,6 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
           Resource: "arn:aws:dynamodb:${aws:region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
-        
-        # 2. DynamoDB GSI Permissions (For Admin Dashboard Analytics)
         - Effect: Allow
           Action:
             - dynamodb:Query
@@ -39,12 +43,17 @@ functions:
 
 resources:
   Resources:
-    # --- DynamoDB Single Table Resource ---
     YogiStudioTable:
       Type: 'AWS::DynamoDB::Table'
       Properties:
         TableName: ${self:provider.environment.DYNAMODB_TABLE}
         BillingMode: PAY_PER_REQUEST
+        # Tags for DynamoDB must be explicitly declared here as well in some CFN versions
+        Tags:
+          - Key: Project
+            Value: YogiStudio
+          - Key: Environment
+            Value: ${self:provider.stage}
         AttributeDefinitions:
           - AttributeName: PK
             AttributeType: S
