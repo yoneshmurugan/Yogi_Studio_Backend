@@ -8,45 +8,6 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "yogi-studio-super-secret-key";
 
 /**
- * 1. Admin Login (OTP Verification)
- * Path: POST /api/v1/admin/users/verify-otp
- * Note: Assuming Firebase Auth verified the phone on the frontend, we issue the Admin JWT here.
- */
-exports.verifyOtp = async (body, sendResponse) => {
-  const { phone } = body;
-
-  if (!phone) {
-    return sendResponse(400, { error: "Phone number is required" });
-  }
-
-  // In a production environment, you would check if this phone number belongs to an authorized Admin.
-  // For now, we issue a secure Admin session token.
-  const token = jwt.sign({ phone, role: "admin" }, JWT_SECRET, { expiresIn: "24h" });
-
-  return sendResponse(200, { 
-    message: "Admin login successful", 
-    token,
-    user: { phone, role: "admin" } 
-  });
-};
-
-/**
- * Helper function to verify Admin JWT
- */
-const verifyAdminToken = (headers) => {
-  const authHeader = headers.Authorization || headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
-  
-  try {
-    const decoded = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-    if (decoded.role !== "admin") return null;
-    return decoded;
-  } catch (err) {
-    return null;
-  }
-};
-
-/**
  * 2. Create User (Admin Dashboard)
  * Path: POST /api/v1/admin/users
  */

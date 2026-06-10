@@ -3,6 +3,7 @@
 // We will build these controller files in Phase 3
 const adminRoutes = require('../routes/admin');
 const customerRoutes = require('../routes/customer');
+const portfolioRoutes = require('../routes/portfolio');
 
 // Standard CORS headers so your React frontend (hosted anywhere) can talk to this API
 const corsHeaders = {
@@ -44,11 +45,6 @@ exports.handler = async (event) => {
     // ---- A. ADMIN ROUTES ----
     if (path.startsWith("/api/v1/admin")) {
       
-      // Admin OTP/Login Validation
-      if (path === "/api/v1/admin/users/verify-otp" && httpMethod === "POST") {
-        return await adminRoutes.verifyOtp(parsedBody, sendResponse);
-      }
-      
       // User Management
       if (path === "/api/v1/admin/users" && httpMethod === "POST") {
         return await adminRoutes.createUser(parsedBody, sendResponse);
@@ -80,9 +76,26 @@ exports.handler = async (event) => {
         const phone = queryStringParameters?.phone;
         return await adminRoutes.updateEvent(eventId, phone, parsedBody, sendResponse);
       }
+
+      // Portfolio Management
+      if (path === "/api/v1/admin/portfolio" && httpMethod === "POST") {
+        return await portfolioRoutes.createPortfolioItem(parsedBody, sendResponse);
+      }
+      const portfolioMatch = path.match(/^\/api\/v1\/admin\/portfolio\/([^\/]+)$/);
+      if (portfolioMatch && httpMethod === "DELETE") {
+        const itemId = portfolioMatch[1];
+        return await portfolioRoutes.deletePortfolioItem(itemId, sendResponse);
+      }
     }
 
-    // ---- B. CUSTOMER ROUTES ----
+    // ---- B. PUBLIC ROUTES ----
+    if (path.startsWith("/api/v1/public")) {
+      if (path === "/api/v1/public/portfolio" && httpMethod === "GET") {
+        return await portfolioRoutes.getPortfolio(queryStringParameters, sendResponse);
+      }
+    }
+
+    // ---- C. CUSTOMER ROUTES ----
     if (path.startsWith("/api/v1/customer")) {
       
       // Customer Auth (Validating Firebase token & creating session)
