@@ -5,22 +5,35 @@ const adminRoutes = require('../routes/admin');
 const customerRoutes = require('../routes/customer');
 const portfolioRoutes = require('../routes/portfolio');
 
-// Standard CORS headers so your React frontend (hosted anywhere) can talk to this API
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // In production, you can restrict this to your actual frontend domain
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "OPTIONS, GET, POST, PUT, PATCH, DELETE"
-};
-
-// Helper function to format responses cleanly
-const sendResponse = (statusCode, body) => ({
-  statusCode,
-  headers: corsHeaders,
-  body: JSON.stringify(body)
-});
+// Allowed origins for CORS (Vercel Frontend + Local Dev + Mobile Capacitor)
+const ALLOWED_ORIGINS = [
+  "https://yogidigitalstudio.in",
+  "https://www.yogidigitalstudio.in",
+  "http://localhost:5173", // Local Web Development
+  "http://localhost",      // Capacitor Android App
+  "capacitor://localhost"  // Capacitor iOS App
+];
 
 exports.handler = async (event) => {
   const { httpMethod, path, body, headers, queryStringParameters } = event;
+  
+  // Extract the Origin from the request headers
+  const origin = headers?.origin || headers?.Origin || "";
+  
+  // If the request comes from an allowed origin, reflect it. Otherwise fallback to the main domain.
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : "https://yogidigitalstudio.in";
+
+  // Helper function scoped inside the handler so it can safely inject the origin
+  const sendResponse = (statusCode, responseBody) => ({
+    statusCode,
+    headers: {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "OPTIONS, GET, POST, PUT, PATCH, DELETE",
+      "Access-Control-Allow-Credentials": "true"
+    },
+    body: JSON.stringify(responseBody)
+  });
 
   // 1. Handle CORS Preflight Requests (Browser security check)
   if (httpMethod === "OPTIONS") {
