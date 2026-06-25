@@ -1,9 +1,10 @@
 // src/utils/firebaseAdmin.js
-const admin = require('firebase-admin');
+const { initializeApp, getApps } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
 
 // Ensure firebase-admin is initialized only once
-if (!admin.apps.length) {
-  admin.initializeApp({
+if (!getApps().length) {
+  initializeApp({
     // Using application default credentials or simply providing the projectId
     // If running in AWS Lambda, you typically need service account creds for full access,
     // but for verifyIdToken, just the projectId is usually sufficient.
@@ -11,4 +12,7 @@ if (!admin.apps.length) {
   });
 }
 
-module.exports = admin;
+// Export a wrapper that mimics the old `admin.auth()` behavior for compatibility
+module.exports = {
+  auth: () => getAuth()
+};
