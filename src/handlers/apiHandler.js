@@ -58,6 +58,28 @@ exports.handler = async (event) => {
     // ---- A. ADMIN ROUTES ----
     if (path.startsWith("/api/v1/admin")) {
       
+      // Admin Authentication Middleware
+      const authHeader = headers?.authorization || headers?.Authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return sendResponse(401, { error: "Missing or invalid authorization header" });
+      }
+
+      const idToken = authHeader.split("Bearer ")[1];
+      try {
+        const adminAuth = require('../utils/firebaseAdmin');
+        const decodedToken = await adminAuth.auth().verifyIdToken(idToken);
+        
+        // Verify the user's email matches the configured Admin Email
+        const authorizedEmail = process.env.ADMIN_EMAIL || "admin@yogi.studio";
+        if (decodedToken.email !== authorizedEmail) {
+          console.error(`Unauthorized admin access attempt by: ${decodedToken.email}`);
+          return sendResponse(403, { error: "Forbidden: You are not authorized as an admin" });
+        }
+      } catch (authError) {
+        console.error("Admin Auth Error:", authError);
+        return sendResponse(401, { error: "Unauthorized or expired token" });
+      }
+
       // User Management
       if (path === "/api/v1/admin/users" && httpMethod === "POST") {
         return await adminRoutes.createUser(parsedBody, sendResponse);
