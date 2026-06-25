@@ -237,3 +237,40 @@ exports.revertSelections = async (eventId, headers, sendResponse) => {
     status: "selection_in_progress"
   });
 };
+
+/**
+ * 5. Save Partial Selections (Cross-device sync)
+ * Path: PATCH /api/v1/customer/events/:eventId/progress
+ */
+exports.saveProgress = async (eventId, body, headers, sendResponse) => {
+  const decoded = verifyToken(headers);
+  if (!decoded) return sendResponse(401, { error: "Unauthorized or expired token" });
+
+  const { selectedPhotoIds = [], rejectedPhotoIds = [], photoComments = {} } = body;
+
+  const command = new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      "PK": `PHONE#${decoded.phone}`,
+      "SK": `EVENT#${eventId}`
+    },
+    UpdateExpression: "SET selectedPhotoIds = :sel, rejectedPhotoIds = :rej, photoComments = :com",
+    ExpressionAttributeValues: {
+      ":sel": selectedPhotoIds,
+      ":rej": rejectedPhotoIds,
+      ":com": photoComments
+    },
+    ConditionExpression: "attribute_exists(PK)" // Ensure the event actually exists
+  });
+
+  try {
+    await docClient.send(command);
+    return sendResponse(200, { message: "Progress saved successfully" });
+  } catch (err) {
+    if (err.name === "ConditionalCheckFailedException") {
+      return sendResponse(404, { error: "Event not found" });
+    }
+    console.error("Error saving progress:", err);
+    return sendResponse(500, { error: "Failed to save progress" });
+  }
+};

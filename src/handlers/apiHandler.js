@@ -162,6 +162,13 @@ exports.handler = async (event) => {
         const eventId = revertMatch[1];
         return await customerRoutes.revertSelections(eventId, headers, sendResponse);
       }
+
+      // Save Photo Selection Progress (Cross-device sync)
+      const progressMatch = path.match(/^\/api\/v1\/customer\/events\/([^\/]+)\/progress$/);
+      if (progressMatch && httpMethod === "PATCH") {
+        const eventId = progressMatch[1];
+        return await customerRoutes.saveProgress(eventId, parsedBody, headers, sendResponse);
+      }
     }
 
     // 4. Fallback 404 Error if the route doesn't match anything above
