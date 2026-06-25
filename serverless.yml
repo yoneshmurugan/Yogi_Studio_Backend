@@ -4,7 +4,7 @@ useDotenv: true
 
 plugins:
   - serverless-offline
-
+  - serverless-domain-manager
 provider:
   name: aws
   runtime: nodejs20.x
@@ -81,3 +81,11 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+custom:
+  customDomain:
+    domainName: api.yogidigitalstudio.in
+    stage: ${self:provider.stage}
+    basePath: ''
+    certificateName: 'api.yogidigitalstudio.in' # Must match exactly what you created in ACM
+    createRoute53Record: false # Set to false because your DNS is in Hostinger, not AWS Route53
+    endpointType: 'regional'
