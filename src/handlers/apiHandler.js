@@ -10,7 +10,8 @@ const ALLOWED_ORIGINS = [
   "https://yogidigitalstudio.in",
   "https://www.yogidigitalstudio.in",
   "http://localhost:5173", // Local Web Development
-  "http://localhost",      // Capacitor Android App
+  "http://localhost",      // Capacitor Android App (HTTP)
+  "https://localhost",     // Capacitor Android App (HTTPS)
   "capacitor://localhost"  // Capacitor iOS App
 ];
 
