@@ -19,6 +19,7 @@ provider:
   environment:
     DYNAMODB_TABLE: YogiStudioData-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET}
+    ADMIN_EMAIL: ${env:ADMIN_EMAIL}
   iam:
     role:
       statements:
