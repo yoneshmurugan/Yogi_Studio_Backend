@@ -70,9 +70,11 @@ exports.handler = async (event) => {
         const adminAuth = require('../utils/firebaseAdmin');
         const decodedToken = await adminAuth.auth().verifyIdToken(idToken);
         
-        // Verify the user's email matches the configured Admin Email
-        const authorizedEmail = process.env.ADMIN_EMAIL || "admin@yogi.studio";
-        if (decodedToken.email !== authorizedEmail) {
+        // Verify the user's email matches the configured Admin Email(s)
+        const authorizedEmailsString = process.env.ADMIN_EMAIL || "admin@yogi.studio,nsbalamurukan1980@gmail.com";
+        const authorizedEmails = authorizedEmailsString.split(',').map(e => e.trim());
+        
+        if (!decodedToken.email || !authorizedEmails.includes(decodedToken.email)) {
           console.error(`Unauthorized admin access attempt by: ${decodedToken.email}`);
           return sendResponse(403, { error: "Forbidden: You are not authorized as an admin" });
         }
