@@ -52,7 +52,7 @@ module.exports.handler = async (event) => {
 
     const { photos } = indexData;
     const matchedPhotos = [];
-    const THRESHOLD = 0.55; // Cosine similarity threshold (higher is stricter). 0.55 is highly accurate for Human.
+    const THRESHOLD = 0.55; // Cosine similarity threshold (higher is stricter). 0.65 ensures fewer false positives.
 
     // 2. Perform the incredibly fast mathematical search
     for (const photo of photos) {
