@@ -46,6 +46,14 @@ functions:
           method: ANY
           cors: true
 
+  matchFace:
+    handler: src/handlers/matchFace.handler
+    events:
+      - http:
+          path: /api/match-face
+          method: POST
+          cors: true
+
 resources:
   Resources:
     YogiStudioTable:
