@@ -1,15 +1,20 @@
 'use strict';
 
-// Helper: Calculate Euclidean Distance between two 128-d vectors
-// face-api.js natively uses Euclidean distance. A distance < 0.6 is a match.
-function euclideanDistance(arr1, arr2) {
-  if (arr1.length !== arr2.length) return Infinity;
-  let sum = 0;
+// Helper: Calculate Cosine Similarity between two 1024-d vectors
+// @vladmandic/human embeddings are best matched using cosine similarity.
+// Returns a value between -1.0 and 1.0 (higher is more similar).
+function cosineSimilarity(arr1, arr2) {
+  if (arr1.length !== arr2.length) return 0;
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
   for (let i = 0; i < arr1.length; i++) {
-    const diff = arr1[i] - arr2[i];
-    sum += diff * diff;
+    dotProduct += arr1[i] * arr2[i];
+    normA += arr1[i] * arr1[i];
+    normB += arr2[i] * arr2[i];
   }
-  return Math.sqrt(sum);
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 module.exports.handler = async (event) => {
@@ -47,7 +52,7 @@ module.exports.handler = async (event) => {
 
     const { photos } = indexData;
     const matchedPhotos = [];
-    const THRESHOLD = 0.6; // Industry standard strictness for face-api.js
+    const THRESHOLD = 0.55; // Cosine similarity threshold (higher is stricter). 0.55 is highly accurate for Human.
 
     // 2. Perform the incredibly fast mathematical search
     for (const photo of photos) {
@@ -55,8 +60,8 @@ module.exports.handler = async (event) => {
       
       let isMatch = false;
       for (const face of faceEmbeddings) {
-        const distance = euclideanDistance(selfieVector, face);
-        if (distance < THRESHOLD) {
+        const similarity = cosineSimilarity(selfieVector, face);
+        if (similarity > THRESHOLD) {
           isMatch = true;
           break; // Stop checking other faces in this photo, it's already a match
         }
