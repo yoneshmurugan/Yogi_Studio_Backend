@@ -47,7 +47,7 @@ module.exports.handler = async (event) => {
 
     const { photos } = indexData;
     const matchedPhotos = [];
-    const THRESHOLD = 0.6; // Industry standard strictness for face-api.js
+    const THRESHOLD = 0.7; // Industry standard strictness for face-api.js
 
     // 2. Perform the incredibly fast mathematical search
     for (const photo of photos) {
