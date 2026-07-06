@@ -15,29 +15,23 @@ function euclideanDistance(arr1, arr2) {
 module.exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || '{}');
-    const { eventId, selfieVector } = body;
+    const { eventId, selfieVector, indexUrl } = body;
 
-    if (!eventId || !selfieVector || !Array.isArray(selfieVector)) {
+    if (!eventId || !selfieVector || !Array.isArray(selfieVector) || !indexUrl) {
       return {
         statusCode: 400,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Credentials': true,
         },
-        body: JSON.stringify({ error: 'Missing eventId or invalid selfieVector' }),
+        body: JSON.stringify({ error: 'Missing eventId, indexUrl, or invalid selfieVector' }),
       };
     }
 
-    // 1. Fetch the face_index.json directly from Firebase Storage REST API
-    // Assuming standard bucket format and public read access for the event photos
-    const bucketName = 'sib-ceb2d.appspot.com';
-    const filePath = encodeURIComponent(`events/${eventId}/face_index.json`);
-    const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${filePath}?alt=media`;
-
     let indexData;
     try {
-      // Using native fetch available in Node 18+
-      const response = await fetch(fileUrl);
+      // Using native fetch available in Node 18+ to fetch the securely signed Firebase URL
+      const response = await fetch(indexUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch index: ${response.statusText}`);
       }
