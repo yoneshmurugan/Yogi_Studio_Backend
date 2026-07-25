@@ -50,7 +50,7 @@ module.exports.handler = async (event) => {
 
     const { photos } = indexData;
     const matchedPhotos = [];
-    const THRESHOLD = 0.65; // Cosine similarity threshold (higher is stricter). 0.65+ eliminates most false positives.
+    const THRESHOLD = 0.60; // Cosine similarity threshold. Balanced for true positives (0.65 was too strict for some angles)
 
     // 2. Perform the incredibly fast mathematical search
     // Pre-calculate the magnitude (norm) of the selfieVector once to save millions of multiplications
