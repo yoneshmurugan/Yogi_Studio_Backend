@@ -27,7 +27,7 @@ This Serverless backend continuously handles thousands of concurrent secure data
 | Platform | Download / Access Link | Supported Frontend Branch |
 | :--- | :--- | :--- |
 | **Google Play Store (Android)** | <!-- REPLACE_WITH_YOUR_PLAYSTORE_LINK_HERE --> *(Coming Soon)* | `mobile` (Capacitor Android) |
-| **Apple App Store (iOS & iPadOS)** | <!-- REPLACE_WITH_YOUR_APPSTORE_LINK_HERE --> *(Coming Soon)* | `mobile` (Capacitor iOS) |
+| **Apple App Store (iOS & iPadOS)** | [Download on App Store](https://apps.apple.com/in/app/yogi-digital-studio/id6790760209) 🚀 | `mobile` (Capacitor iOS) |
 | **Live Web Studio & PWA** | [https://yogidigitalstudio.in](https://yogidigitalstudio.in) | `main` (React + Vite Web) |
 
 ---
