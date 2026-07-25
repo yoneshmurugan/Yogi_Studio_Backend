@@ -3,14 +3,12 @@
 // Helper: Calculate Cosine Similarity between two 1024-d vectors
 // @vladmandic/human embeddings are best matched using cosine similarity.
 // Returns a value between -1.0 and 1.0 (higher is more similar).
-function cosineSimilarity(arr1, arr2) {
+function cosineSimilarity(arr1, arr2, normA) {
   if (arr1.length !== arr2.length) return 0;
   let dotProduct = 0;
-  let normA = 0;
   let normB = 0;
   for (let i = 0; i < arr1.length; i++) {
     dotProduct += arr1[i] * arr2[i];
-    normA += arr1[i] * arr1[i];
     normB += arr2[i] * arr2[i];
   }
   if (normA === 0 || normB === 0) return 0;
@@ -55,12 +53,18 @@ module.exports.handler = async (event) => {
     const THRESHOLD = 0.55; // Cosine similarity threshold (higher is stricter). 0.65 ensures fewer false positives.
 
     // 2. Perform the incredibly fast mathematical search
+    // Pre-calculate the magnitude (norm) of the selfieVector once to save millions of multiplications
+    let selfieNorm = 0;
+    for (let i = 0; i < selfieVector.length; i++) {
+      selfieNorm += selfieVector[i] * selfieVector[i];
+    }
+
     for (const photo of photos) {
       const { photoUrl, faceEmbeddings } = photo;
       
       let isMatch = false;
       for (const face of faceEmbeddings) {
-        const similarity = cosineSimilarity(selfieVector, face);
+        const similarity = cosineSimilarity(selfieVector, face, selfieNorm);
         if (similarity > THRESHOLD) {
           isMatch = true;
           break; // Stop checking other faces in this photo, it's already a match
