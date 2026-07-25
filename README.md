@@ -93,8 +93,8 @@ Instead of relying on slow relational JOINs, this API utilizes advanced **AWS Si
 ```mermaid
 erDiagram
     STUDIO_TABLE {
-        string PK PK "Entity Identifier (e.g., USER#+91..., EVENT#evt_123)"
-        string SK SK "Sub-Entity Marker (e.g., PROFILE, METADATA, FOLDER#id)"
+        string PK "Entity Identifier (e.g., USER#+91..., EVENT#evt_123)"
+        string SK "Sub-Entity Marker (e.g., PROFILE, METADATA, FOLDER#id)"
         string GSI1_PK "Global Secondary Index Partition (Reverse Lookup)"
         string GSI1_SK "Global Secondary Index Sort (Date / Status sorting)"
         json Attributes "Flexible Domain Schema (Image URL, OTP timestamp, Cover Asset)"
