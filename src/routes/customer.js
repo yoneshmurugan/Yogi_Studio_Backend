@@ -34,7 +34,7 @@ exports.verifyCustomerOtp = async (body, sendResponse) => {
   }
 
   // Generate a secure session token valid for 24 hours
-  const token = jwt.sign({ phone }, JWT_SECRET, { expiresIn: "24h" });
+  const token = jwt.sign({ phone }, JWT_SECRET, { expiresIn: "30d" });
 
   return sendResponse(200, { 
     message: "Login successful", 
