@@ -110,7 +110,10 @@ exports.getCurrentEvent = async (headers, sendResponse) => {
 
   // Extract the profile and the events
   const profileItem = response.Items.find(item => item.SK.startsWith("PROFILE#"));
-  const events = response.Items.filter(item => item.SK.startsWith("EVENT#"));
+  const events = response.Items.filter(item => item.SK.startsWith("EVENT#")).map(ev => ({
+    ...ev,
+    folders: decompressFolders(ev.folders)
+  }));
 
   if (events.length === 0) {
     return sendResponse(404, { error: "No active events found." });
@@ -158,6 +161,7 @@ exports.submitSelections = async (eventId, body, headers, sendResponse) => {
   }
 
   const event = eventData.Items[0];
+  event.folders = decompressFolders(event.folders);
 
   // Map through the folders and photos to flip the `is_selected` boolean
   const updatedFolders = (event.folders || []).map(folder => ({
@@ -179,7 +183,7 @@ exports.submitSelections = async (eventId, body, headers, sendResponse) => {
     UpdateExpression: "SET folders = :folders, #st = :status",
     ExpressionAttributeNames: { "#st": "status" },
     ExpressionAttributeValues: {
-      ":folders": updatedFolders,
+      ":folders": compressFolders(updatedFolders),
       ":status": "awaiting_approval"
     }
   });

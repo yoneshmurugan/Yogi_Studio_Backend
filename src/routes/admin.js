@@ -108,7 +108,7 @@ exports.createEvent = async (body, sendResponse) => {
     status: "pending",                     // Matches frontend status
     accessToken,                           // Backend-generated access token
     downloadedAt: null,
-    folders: folders || [],                // Array of folder objects containing photos
+    folders: compressFolders(folders || []),                // Array of folder objects containing photos
     createdAt: timestamp,
     updatedAt: timestamp
   };
@@ -218,7 +218,7 @@ exports.updateEvent = async (eventId, phone, body, sendResponse) => {
   if (body.folders !== undefined) {
     updates.push("#f = :f");
     ExpressionAttributeNames["#f"] = "folders";
-    ExpressionAttributeValues[":f"] = body.folders;
+    ExpressionAttributeValues[":f"] = compressFolders(body.folders);
   }
   if (body.status !== undefined) {
     updates.push("#s = :s");
