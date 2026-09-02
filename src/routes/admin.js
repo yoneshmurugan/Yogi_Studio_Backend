@@ -144,9 +144,14 @@ exports.listEvents = async (queryStringParameters, sendResponse) => {
 
   const response = await docClient.send(command);
 
+    const events = (response.Items || []).map(ev => ({
+    ...ev,
+    folders: ev.folders ? decompressFolders(ev.folders) : []
+  }));
+
   return sendResponse(200, {
-    totalEvents: response.Items ? response.Items.length : 0,
-    events: response.Items || []
+    totalEvents: events.length,
+    events: events
   });
 };
 
