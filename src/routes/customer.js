@@ -1,7 +1,7 @@
 // src/routes/customer.js
 const { QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { docClient, TABLE_NAME } = require("../utils/db");
-const { sanitizePhone } = require("../utils/helpers");
+const { sanitizePhone, compressFolders, decompressFolders } = require("../utils/helpers");
 const jwt = require("jsonwebtoken");
 
 // In production, this should be set securely in your AWS environment variables

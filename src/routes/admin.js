@@ -1,7 +1,7 @@
 // src/routes/admin.js
 const { PutCommand, QueryCommand, ScanCommand, DeleteCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { docClient, TABLE_NAME } = require("../utils/db");
-const { sanitizePhone } = require("../utils/helpers");
+const { sanitizePhone, compressFolders, decompressFolders } = require("../utils/helpers");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
