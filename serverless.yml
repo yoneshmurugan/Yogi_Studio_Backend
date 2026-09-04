@@ -49,7 +49,7 @@ functions:
   matchFace:
     handler: src/handlers/matchFace.handler
     timeout: 29
-    memorySize: 4096
+    memorySize: 3008
     events:
       - http:
           path: /api/v1/match-face
