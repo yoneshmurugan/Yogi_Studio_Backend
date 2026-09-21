@@ -131,20 +131,27 @@ exports.createEvent = async (body, sendResponse) => {
  * Path: GET /api/v1/admin/events
  */
 exports.listEvents = async (queryStringParameters, sendResponse) => {
-  // To populate the Admin dashboard, we query the GSI for all events sorted by date.
-  const command = new QueryCommand({
-    TableName: TABLE_NAME,
-    IndexName: "GSI1",
-    KeyConditionExpression: "GSI1_PK = :typePk",
-    ExpressionAttributeValues: {
-      ":typePk": "TYPE#EVENT"
-    },
-    ScanIndexForward: false // Returns newest events first
-  });
+  let allItems = [];
+  let lastEvaluatedKey = undefined;
 
-  const response = await docClient.send(command);
+  do {
+    const command = new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: "GSI1",
+      KeyConditionExpression: "GSI1_PK = :typePk",
+      ExpressionAttributeValues: {
+        ":typePk": "TYPE#EVENT"
+      },
+      ScanIndexForward: false,
+      ExclusiveStartKey: lastEvaluatedKey
+    });
 
-    const events = (response.Items || []).map(ev => ({
+    const response = await docClient.send(command);
+    allItems = allItems.concat(response.Items || []);
+    lastEvaluatedKey = response.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  const events = allItems.map(ev => ({
     ...ev,
     folders: ev.folders ? decompressFolders(ev.folders) : []
   }));
