@@ -25,16 +25,36 @@ exports.handler = async (event) => {
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : "https://yogidigitalstudio.in";
 
   // Helper function scoped inside the handler so it can safely inject the origin
-  const sendResponse = (statusCode, responseBody) => ({
-    statusCode,
-    headers: {
-      "Access-Control-Allow-Origin": allowedOrigin,
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Allow-Methods": "OPTIONS, GET, POST, PUT, PATCH, DELETE",
-      "Access-Control-Allow-Credentials": "true"
-    },
-    body: JSON.stringify(responseBody)
-  });
+  const zlib = require('zlib');
+  const sendResponse = (statusCode, responseBody) => {
+    const jsonStr = JSON.stringify(responseBody);
+    if (jsonStr.length > 1024 * 1024) {
+      return {
+        statusCode,
+        headers: {
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Methods": "OPTIONS, GET, POST, PUT, PATCH, DELETE",
+          "Access-Control-Allow-Credentials": "true",
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip"
+        },
+        body: zlib.gzipSync(jsonStr).toString('base64'),
+        isBase64Encoded: true
+      };
+    }
+    return {
+      statusCode,
+      headers: {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Methods": "OPTIONS, GET, POST, PUT, PATCH, DELETE",
+        "Access-Control-Allow-Credentials": "true",
+        "Content-Type": "application/json"
+      },
+      body: jsonStr
+    };
+  };
 
   // 1. Handle CORS Preflight Requests (Browser security check)
   if (httpMethod === "OPTIONS") {
